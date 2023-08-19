@@ -204,6 +204,11 @@ type Player struct {
 	// space for new players. The player with the oldest disconnect.Time will
 	// get kicked.
 	disconnectTime *time.Time
+	// desiredState is used for state changes between spectator and player.
+	// We want to prevent people from switching in and out of the play state.
+	// While this will allow people to skip being the drawer, it will also
+	// cause them to lose points for that round.
+	desiredState PlayerState
 
 	votedForKick map[uuid.UUID]bool
 

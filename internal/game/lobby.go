@@ -80,11 +80,19 @@ func (lobby *Lobby) HandleEvent(eventType string, payload []byte, player *Player
 	lobby.mutex.Lock()
 	defer lobby.mutex.Unlock()
 
+	if player.State == Spectator {
+		return nil
+	}
+
 	// For all followup unmarshalling of the already unmarshalled Event, we
 	// use mapstructure instead. It's cheaper in terms of CPU usage and
 	// memory usage. There are benchmarks to prove this in json_test.go.
 
-	if eventType == EventTypeMessage {
+	if eventType == "spectate" {
+		player.desiredState = Spectator
+	} else if eventType == "participate" {
+		player.desiredState = Guessing
+	} else if eventType == EventTypeMessage {
 		var message StringDataEvent
 		if err := easyjson.Unmarshal(payload, &message); err != nil {
 			return fmt.Errorf("invalid data received: '%s'", string(payload))
@@ -169,7 +177,9 @@ func (lobby *Lobby) HandleEvent(eventType string, payload []byte, player *Player
 			wordHintData := &Event{Type: EventTypeUpdateWordHint, Data: lobby.wordHints}
 			lobby.broadcastConditional(wordHintData, IsGuessing)
 			wordHintDataRevealed := &Event{Type: EventTypeUpdateWordHint, Data: lobby.wordHintsShown}
-			lobby.broadcastConditional(wordHintDataRevealed, IsNotGuessing)
+			lobby.broadcastConditional(wordHintDataRevealed, func(p *Player) bool {
+				return p.State == Drawing || p.State == Standby
+			})
 		}
 	} else if eventType == EventTypeKickVote {
 		if lobby.EnableVotekick {
@@ -416,6 +426,10 @@ func handleKickVoteEvent(lobby *Lobby, player *Player, toKickID uuid.UUID) {
 	}
 
 	playerToKick := lobby.players[playerToKickIndex]
+	// Can't kick spectators
+	if playerToKick.State == Spectator {
+		return
+	}
 
 	player.votedForKick[toKickID] = true
 	var voteKickCount int
@@ -602,6 +616,10 @@ func advanceLobbyPredefineDrawer(lobby *Lobby, roundOver bool, newDrawer *Player
 	lobby.scoreEarnedByGuessers = 0
 
 	for _, otherPlayer := range lobby.players {
+		if otherPlayer.State == Spectator {
+			continue
+		}
+
 		// If the round ends and people still have guessing, that means the
 		// "LastScore" value for the next turn has to be "no score earned".
 		if otherPlayer.State == Guessing {
@@ -610,6 +628,13 @@ func advanceLobbyPredefineDrawer(lobby *Lobby, roundOver bool, newDrawer *Player
 		// Initially all players are in guessing state, as the drawer gets
 		// defined further at the bottom.
 		otherPlayer.State = Guessing
+	}
+
+	for _, player := range lobby.players {
+		if player.desiredState != "" {
+			player.State = player.desiredState
+			player.desiredState = ""
+		}
 	}
 
 	recalculateRanks(lobby)
@@ -635,7 +660,6 @@ func advanceLobbyPredefineDrawer(lobby *Lobby, roundOver bool, newDrawer *Player
 				})
 			}
 
-			// Omit rest of events, since we don't need to advance.
 			return
 		}
 
@@ -672,29 +696,31 @@ func advanceLobby(lobby *Lobby) {
 	advanceLobbyPredefineDrawer(lobby, roundOver, newDrawer)
 }
 
+func validDrawer(player *Player) bool {
+	return player.Connected || player.State == Drawing || player.State == Standby
+}
+
 // determineNextDrawer returns the next person that's supposed to be drawing, but
 // doesn't tell the lobby yet. The boolean signals whether the current round
 // is over.
 func determineNextDrawer(lobby *Lobby) (*Player, bool) {
+	// Attempt to take the next player in line.
 	for index, player := range lobby.players {
 		if player == lobby.drawer {
-			// If we have someone that's drawing, take the next one
 			for i := index + 1; i < len(lobby.players); i++ {
-				player := lobby.players[i]
-				if player.Connected {
+				if player := lobby.players[i]; validDrawer(player) {
 					return player, false
 				}
 			}
 
-			// No player below the current drawer has been found, therefore we
-			// fallback to our default logic at the bottom.
+			// Next round
 			break
 		}
 	}
 
-	// We prefer the first connected player.
+	// Start from the top of the player list again.
 	for _, player := range lobby.players {
-		if player.Connected {
+		if validDrawer(player) {
 			return player, true
 		}
 	}
@@ -794,19 +820,15 @@ func recalculateRanks(lobby *Lobby) {
 	lastScore := math.MaxInt32
 	var lastRank int
 	for _, player := range sortedPlayers {
-		if !player.Connected {
+		if !player.Connected && player.State != Spectator {
 			continue
 		}
 
 		if player.Score < lastScore {
 			lastRank++
-			player.Rank = lastRank
 			lastScore = player.Score
-		} else {
-			// Since the players are already sorted from high to low, we only
-			// have the cases higher or equal.
-			player.Rank = lastRank
 		}
+		player.Rank = lastRank
 	}
 }
 

@@ -121,6 +121,17 @@
                             </div>
                         </div>
 
+                        <div id="spectator-choice-dialog" class="center-dialog">
+                            <span class="dialog-title">TODO</span>
+                            <div class="center-dialog-content">
+                                <!-- FIXME New class / More generic class? -->
+                                <div class="word-button-container">
+                                    <button class="dialog-button" onclick="participate()"></button>
+                                    <button class="dialog-button" onclick="spectate()"></button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div id="unstarted-dialog" class="center-dialog">
                             <span class="dialog-title">{{.Translation.Get "game-not-started-title"}}</span>
                             <div class="center-dialog-content">
@@ -507,6 +518,7 @@
 
         const centerDialogs = document.getElementById("center-dialogs");
 
+        const spectatorChoiceDialog = document.getElementById("spectator-choice-dialog");
         const unstartedDialog = document.getElementById("unstarted-dialog");
         const waitChooseDialog = document.getElementById("waitchoose-dialog");
         const waitChooseDrawerSpan = document.getElementById("waitchoose-drawer");
@@ -1386,8 +1398,9 @@
             playerContainer.innerHTML = "";
             cachedPlayers = players;
             players.forEach(player => {
-                //We don't wanna show the disconnected players.
-                if (!player.connected) {
+                // We don't wanna show the disconnected players or spectators.
+                // the UI is cluttered enough as is.
+                if (!player.connected || player.state === "spectator") {
                     return;
                 }
 
