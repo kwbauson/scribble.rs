@@ -82,8 +82,9 @@
                             <span>100%</span>
                         </div>
                         <b>{{.Translation.Get "custom-words"}}</b>
-                        <textarea class="input-item" name="custom_words"
+                        <textarea class="input-item custom-words" name="custom_words"
                             placeholder="{{.Translation.Get "custom-words-info"}}">{{.CustomWords}}</textarea>
+                        <input type="button" onclick="fetch('https://docs.google.com/spreadsheets/d/1LslSAVW3WORKp-M-K8GzwFcVyyk4Gg4HyCa84XfKuv0/export?gid=0&range=H1&format=csv').then(x => x.text()).then(x => {document.getElementsByClassName('custom-words')[0].value = x.slice(1, -1)})" value="fetch words"/>
                         <button type="submit" class="create-button" form="lobby-create">
                             {{.Translation.Get "create-lobby"}}
                         </button>

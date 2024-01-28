@@ -93,12 +93,7 @@
                         <div id="word-dialog" class="center-dialog">
                             <span class="dialog-title">{{.Translation.Get "choose-a-word"}}</span>
                             <div class="center-dialog-content">
-                                <div class="word-button-container">
-                                    <button id="word-button-zero" class="dialog-button"
-                                        onclick="chooseWord(0)"></button>
-                                    <button id="word-button-one" class="dialog-button" onclick="chooseWord(1)"></button>
-                                    <button id="word-button-two" class="dialog-button" onclick="chooseWord(2)"></button>
-                                </div>
+                                <div class="word-button-container" style="display: grid; row-gap: 10px; column-gap: 10px; grid-template-columns: auto 1fr; grid-template-rows: repeat(10, auto)"></div>
                             </div>
                         </div>
 
@@ -525,9 +520,12 @@
         const gameOverScoreboard = document.getElementById("game-over-scoreboard");
         const restartButton = document.getElementById("restart-button");
         const wordDialog = document.getElementById("word-dialog");
-        const wordButtonZero = document.getElementById("word-button-zero");
-        const wordButtonOne = document.getElementById("word-button-one");
-        const wordButtonTwo = document.getElementById("word-button-two");
+        const wordButtonContainer = document.getElementsByClassName('word-button-container')[0];
+        for (let i = 0; i < 10; i++) {
+          wordButtonContainer.innerHTML += `<button id="word-button-${i}" class="dialog-button" onclick="chooseWord(${i})"></button>`;
+          wordButtonContainer.innerHTML += '<a target="_blank" style="text-decoration: underline; color: blue" href="http://example.com">Veto</a>';
+        }
+        const wordButtons = [...wordButtonContainer.children];
 
         const kickDialog = document.getElementById("kick-dialog");
         const kickDialogPlayers = document.getElementById("kick-dialog-players");
@@ -1126,7 +1124,7 @@
                     //This dialog could potentially stay visible from last
                     //turn, in case nobody has chosen a word.
                     waitChooseDialog.style.visibility = "hidden";
-                    promptWords(parsed.data[0], parsed.data[1], parsed.data[2]);
+                    promptWords(parsed.data);
                 } else if (parsed.type === "drawing") {
                     applyDrawData(parsed.data);
                 } else if (parsed.type === "kick-vote") {
@@ -1324,10 +1322,15 @@
             }
         }
 
-        function promptWords(wordOne, wordTwo, wordThree) {
-            wordButtonZero.textContent = wordOne;
-            wordButtonOne.textContent = wordTwo;
-            wordButtonTwo.textContent = wordThree;
+        function promptWords(data) {
+            wordButtons.forEach((button, i) => {
+              const word = data[Math.floor(i / 2)];
+              if (i % 2 === 0) {
+                button.textContent = word;
+              } else {
+                button.href = `https://docs.google.com/forms/d/e/1FAIpQLSdlXJpQjA_9ugHoGVyCsz_Lza89yGPBCfbxNg3_K8MroqcVmA/viewform?usp=pp_url&entry.1634468712=${word}`;
+              }
+            });
             wordDialog.style.visibility = "visible";
         }
 

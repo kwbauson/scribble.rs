@@ -652,7 +652,7 @@ func advanceLobbyPredefineDrawer(lobby *Lobby, roundOver bool, newDrawer *Player
 	lobby.ClearDrawing()
 	newDrawer.State = Drawing
 	lobby.State = Ongoing
-	lobby.wordChoice = GetRandomWords(3, lobby)
+	lobby.wordChoice = GetRandomWords(10, lobby)
 
 	// We use milliseconds for higher accuracy
 	lobby.roundEndTime = getTimeAsMillis() + int64(lobby.DrawingTime)*1000
@@ -823,15 +823,7 @@ func (lobby *Lobby) selectWord(wordChoiceIndex int) {
 	// Depending on how long the word is, a fixed amount of hints
 	// would be too easy or too hard.
 	runeCount := utf8.RuneCountInString(lobby.CurrentWord)
-	if runeCount <= 2 {
-		lobby.hintCount = 0
-	} else if runeCount <= 4 {
-		lobby.hintCount = 1
-	} else if runeCount <= 9 {
-		lobby.hintCount = 2
-	} else {
-		lobby.hintCount = 3
-	}
+	lobby.hintCount = runeCount / 3
 	lobby.hintsLeft = lobby.hintCount
 
 	// We generate both the "empty" word hints and the hints for the
