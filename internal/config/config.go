@@ -63,10 +63,10 @@ var Default = Config{
 	Port: 8080,
 	LobbySettingDefaults: LobbySettingDefaults{
 		Public:            "false",
-		DrawingTime:       "120",
+		DrawingTime:       "150",
 		Rounds:            "4",
 		MaxPlayers:        "12",
-		CustomWordsChance: "90",
+		CustomWordsChance: "100",
 		ClientsPerIPLimit: "20",
 		EnableVotekick:    "true",
 		Language:          "english",
